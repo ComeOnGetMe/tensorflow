@@ -325,7 +325,7 @@ struct AvgPoolMeanReducer {
 
   EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE T finalize(const T accum) const {
     eigen_assert(scalarCount_ > 0);
-    return accum / scalarCount_;
+    return accum / T(scalarCount_);
   }
 
 #if (EIGEN_ARCH_i386 || EIGEN_ARCH_x86_64) && !defined(__CUDACC__)
@@ -374,6 +374,24 @@ struct AvgPoolMeanReducer {
   typedef typename packet_traits<T>::type Packet;
   int scalarCount_;
   Packet packetCount_;
+};
+
+template <typename Device>
+struct reducer_traits<AvgPoolMeanReducer<float>, Device> {
+  enum {
+    Cost = 1,
+#if (EIGEN_ARCH_i386 || EIGEN_ARCH_x86_64) && !defined(__CUDACC__)
+    // We only support packet access for floats.
+    PacketAccess = true
+#else
+    PacketAccess = false
+#endif
+  };
+};
+
+template <>
+struct reducer_traits<AvgPoolMeanReducer<float>, GpuDevice> {
+  enum { Cost = 1, PacketAccess = false };
 };
 
 }  // namespace internal
